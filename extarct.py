@@ -1,3 +1,7 @@
+import json
+
+import requests
+
 n= 6
 dt = []
 dindex = []
@@ -19,3 +23,12 @@ def str2index(str):
         dict['1'] = 0
     print("得到索引串："+"".join(index))
     return "".join(index)
+
+# 识别是否存在相似水印
+def recognize(filename: str):
+    url = 'http://10.64.71.21:8000/audio/recognize'
+    payload = {'filename': filename}
+    r = requests.get(url, params=payload)
+    data = json.loads(r.text)
+    bool = data['data']
+    return bool

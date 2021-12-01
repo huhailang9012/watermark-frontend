@@ -1,9 +1,41 @@
+import subprocess
+
 import json
 
 import requests as requests
 import time
 nowTime = time.strftime("%Y-%m-%d %H:%M:%S")
 from conSql import search_maxid, insert_msg, search
+from stegstash import soundlsb
+
+
+def audio_embed(filename: str, secrest: str):
+    cmd = 'ffmpeg -i {} -f wav -ar 16000 {}'
+    cmd.format(filename, './audio.wav')
+    subprocess.call(cmd, shell=True)
+
+    cmd = 'ffmpeg -i ' + filename + ' -vcodec copy -an video.avi'
+    subprocess.call(cmd, shell=True)
+
+    soundlsb.simpleEncode("./audio.wav", "./audio_embed.wav", secrest)
+
+    cmd = 'ffmpeg -i ./video.avi -i ./audio_embed.wav -vcodec copy -acodec copy ./test3_embed.mp4'
+    subprocess.call(cmd, shell=True)
+
+    return "./audio_embed.wav"
+
+
+def remote_fingerprint(source_path: str):
+
+    payload = {"source_path": source_path, "format": 'wav'}
+    url = 'http://10.64.71.21:8000/audio/fingerprinting'
+    requests.post(url, payload)
+
+
+def fingerprinting(filename: str, secrest: str):
+    embed_name = audio_embed(filename, secrest)
+    remote_fingerprint(embed_name)
+
 
 def remote_embed(path: str, secrets: str) -> str:
     payload = {"video_path": path, "secrets": secrets}
@@ -39,7 +71,7 @@ def embed_msg(filename: str, secrets: str, mtype: str) -> str:
     print(id)
     path = remote_embed('/data/huhailang/frontend/upload/' + filename, id)
     insert_msg(id, secrets, mtype)
-    return path
+    return path, id
 
 
 def extract_msg(filename: str) -> tuple:

@@ -2,7 +2,7 @@
 # coding=utf-8
 
 import os
-from embed import embed_msg, extract_msg
+from embed import embed_msg, extract_msg, fingerprinting
 
 from flask import Flask, request, Response, render_template as rt
 
@@ -21,9 +21,12 @@ def encode():
     filename = data['filename']
     secrets = data['secrets']  # 获取该分片在所有分片中的序号
     mtype = data['type']
-    path = embed_msg(filename, secrets, mtype)
+    path, id = embed_msg(filename, secrets, mtype)
+    # 嵌入音频水印，并生成指纹
+    fingerprinting(filename, id)
     filename = os.path.basename(path)
     return 'http://watermark.vipgz4.91tunnel.com/file/download/' + filename
+
 
 @app.route('/file/upload', methods=['POST'])
 def upload_part():  # 接收前端上传的一个分片
