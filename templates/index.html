@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+    <script src="./static/jquery-1.11.1.min.js"></script>
+    <script src="./static/bootstrap/js/bootstrap.min.js"></script>
+    <script src="./static/webuploader/webuploader.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="./static/webuploader/webuploader.css">
+    <link rel="stylesheet" type="text/css" href="./static/bootstrap/css/bootstrap.min.css">
+</head>
+
+<body>
+<div style="text-align: center;">
+    <h1 class="press">视频水印</h1>
+    <div id="alert" style="margin:0 auto;width:33%;"></div>
+</div>
+<div id="uploader" class="wu-example" style="margin-top:-20px;">
+    <div class="queueList">
+        <ul>
+            <li style="width:26%;">
+                <img src="static/one.png" style="width:60px;height:60px;margin-left:42%;">
+                <div class="panel panel-info" style="box-shadow:0 0 7px 0 #ecf0f5;margin-top:-20px;">
+                    <div class="panel-heading">
+                        <h3 class="panel-title" style="margin-top:20px;text-align:center;">请上传视频</h3>
+                    </div>
+                    <div class="panel-body" style="height:400px;">
+                        <div id="dndArea" class="placeholder">
+                            <div id="picker" class="webuploader-container">点击选择视频
+                                <div id="rt_rt_1fi1hsspu183o1f78nlih2fvc91"
+                                     style="position: absolute; top: 178px; left: 444.2px; width: 168px; height: 44px; overflow: hidden;">
+                                    <input type="file" multiple="multiple" accept="image/*"
+                                           style="position: absolute; clip: rect(1px, 1px, 1px, 1px);">
+                                    <label style="opacity: 0; width: 100%; height: 100%; display: block; cursor: pointer; background: rgb(255, 255, 255);"></label>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="progress" class="progress" style="width:300px;margin:20px auto;">
+                            <div class="progress-bar progress-bar-striped active" role="progressbar"
+                                 style="width:0%;"></div>
+                        </div>
+                        <div id="imgInfo"></div>
+                    </div>
+                </div>
+            </li>
+            <li style="width:45%;">
+                <img src="static/two.png" style="width:60px;height:60px;margin-left:45%;">
+                <div class="panel panel-info" style="box-shadow:0 0 7px 0 #ecf0f5;margin-top:-20px;">
+                    <div class="panel-heading">
+                        <h3 class="panel-title" style="margin-top:20px;text-align:center;">请输入嵌入水印信息</h3>
+                    </div>
+                    <div class="panel-body" style="padding:10px 30px;">
+                        <div class="placehold">
+                            <div id="demo" class="Uploader" style="height:380px;width:100%;background:#F0F4F9;padding:1px;">
+                                <div class="total_bg" style="height:100%; background-color:#CADAEE;">
+                                    <div class="oper" style="dislay:inline;padding-top:5px;overflow:hidden;">
+                                    <div style="float:left;margin-left:4px;">
+                                        请输入隐藏信息：
+                                    </div >
+                                        <label><input name="format" type="radio" value="0" checked="checked"/>文本 </label>
+                                        <label><input name="format" type="radio" value="1" />图片 </label>
+                                        <div class="fileinput">
+                                            上传文件/图片<input type="file" id="avatar" name="avatar" class="add">
+                                        </div>
+                                    </div>
+                                    <textarea type="text" id="secretinput" class="content" style="height:330px;width:99%;">
+                                    </textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+            </div>
+            </li>
+            <li style="width:26%;">
+                <img src="static/three.png" style="width:60px;height:60px;margin-left:42%;">
+                <div class="panel panel-info" style="box-shadow:0 0 7px 0 #ecf0f5;margin-top:-20px;">
+                    <div class="panel-heading">
+                        <h3 class="panel-title" style="margin-top:20px;text-align:center;">点击进行水印嵌入/提取</h3>
+                    </div>
+                    <div class="panel-body" style="height:400px;">
+                        <div class="statusBar">
+                            <div class="btns">
+                                <div id="encode" class="uploadBtn">编码</div>
+                                <div id="decode" class="uploadBtn">解码</div>
+                            </div>
+                        </div>
+                        <div id="img" style="clear:both;margin:20px auto;"></div>
+                        <div id="imgResult"></div>
+                        <ul class="filelist"></ul>
+                    </div>
+                </div>
+            </li>
+        </ul>
+    </div>
+</div>
+<script type="text/javascript">
+    $(document).ready(function() {
+        var file1;
+        var value = $('input[name="format"]:checked').val();
+        var imgByte;
+        var task_id = WebUploader.Base.guid(); // 产生文件唯一标识符task_id
+        var uploader = WebUploader.create({ //视频上传
+            swf: './static/webuploader/Uploader.swf',
+            server: '{{ url_for("upload_part") }}', // 接收上传分片地址
+            pick: '#picker',
+            auto: true,
+            chunked: true,
+            chunkSize: 20 * 1024 * 1024,
+            chunkRetry: 3,
+            threads: 1,
+            duplicate: true,
+            formData: { // 上传分片的http请求中一同携带的数据
+                task_id: task_id,
+            },
+        });
+        var downloader = WebUploader.create({  //视频解码
+            swf: './static/webuploader/Uploader.swf',
+            server: '{{ url_for("upload_decode_part") }}', // 接收上传分片地址
+            pick: '#decode',
+            auto: true,
+            chunked: true,
+            chunkSize: 20 * 1024 * 1024,
+            chunkRetry: 3,
+            threads: 1,
+            duplicate: true,
+            formData: { // 上传分片的http请求中一同携带的数据
+                task_id: task_id,
+            },
+        });
+        //文件图片处理
+        $("#avatar").bind("change",function(){
+            value = $('input[name="format"]:checked').val();
+            var files = document.getElementById('avatar').files;
+            if(files.length == 0){
+                return;
+            }
+            console.log(files);
+            var file = files[0];
+            var filextension=file.name.substring(file.name.lastIndexOf("."),file.name.length);
+            filextension=filextension.toLowerCase();
+            if ((filextension=='.jpg')||(filextension=='.gif')||(filextension=='.jpeg')||(filextension=='.png')||(filextension=='.bmp'))
+            {
+                console.log(value);
+                if(value!=1){
+                    var alert = document.getElementById("alert");
+                    alert.innerHTML='<div class="alert alert-danger fade in"><button type="button" class="close" data-dismiss="alert">&times;</button><strong>请上传".txt",".doc",".docx",".pdf"格式的文件或更改上传文件选项！</strong> </div>';
+                }
+                else{
+                    console.log("jpg");
+                    //把上传的图片显示出来
+                    var reader = new FileReader();
+                    // 将文件以Data URL形式进行读入页面
+                    console.log(reader);
+                    reader.readAsBinaryString(file);
+                    reader.onload = function(f){
+                        var result = document.getElementById("imgInfo");
+                        imgByte=window.btoa(this.result);
+                        console.log(file.type);
+                        var src = "data:" + file.type + ";base64," + imgByte;
+                        console.log(src);
+                        result.innerHTML = '<img style="width:325px;height:200px;" src ="'+src+'"/>';
+                    }
+                }
+            }
+            else if((filextension=='.txt')||(filextension=='.doc')||(filextension=='.docx')||(filextension=='.pdf')){
+                console.log(value);
+                if(value!=0){
+                    var alert = document.getElementById("alert");
+                    alert.innerHTML='<div class="alert alert-danger fade in"><button type="button" class="close" data-dismiss="alert">&times;</button><strong>请上传".jpg",".gif",".png",".bmp"格式的图片或更改上传文件选项！</strong> </div>';
+                }
+                else{
+                    var reader = new FileReader();
+                    reader.onload = function(){
+                        $("#secretinput").val(this.result);
+                    };
+                    reader.readAsText(file);
+                }
+            }
+            else{
+                var alert = document.getElementById("alert");
+                alert.innerHTML='<div class="alert alert-danger fade in"><button type="button" class="close" data-dismiss="alert">&times;</button><strong>请上传正确的图片或文件!</strong> </div>';
+                file.focus();
+            }
+        });
+
+        $("#decode > .webuploader-pick").removeClass("webuploader-pick");
+
+        //上传秘密信息
+        $("#encode").click(function(){ //视频加水印,传递视频名称及加密信息
+            $('.filelist').empty();
+            $('#imgResult').empty();
+            if(value==0){
+                var sec = $("#secretinput").val();
+                if(sec == "")
+                    alert("请输入隐藏信息！");
+                else{
+                    var result = [];
+                    var list = sec.split("");
+                    for(var i=0;i<list.length;i++){
+                        if(i != 0){
+                          //加空格，分割二进制
+                          result.push(" ");
+                        }
+                    var item = list[i];
+                    //将字符串转化为二进制数据
+                    var binaryStr = item.charCodeAt().toString(2);
+                    result.push(binaryStr);
+                    }
+                    list = result.join("");
+                    sec={"filename":file1.source['name'],"secrets":list,"type":value};
+                    $("#img").html('<div style="margin:auto;height:50px;width:50px;"><img src="static/loading.gif" style="height:50px;width:50px;" alt=""></div><div style="text-align:center;color:grey;">正在编码请稍候...</div>');
+                    $.ajax({
+                        url: '{{ url_for("encode") }}',
+                        type: "POST",
+                        timeout:600000,
+                        headers:{
+                            "Content-Type": "application/json;charset=utf-8"
+                        },
+                        contentType:'application/json;charset=utf-8',
+                        data: JSON.stringify(sec),
+                        success:function(path,textStatus,jqXHR){ //获取数据成功所执行的函数
+                            console.log(path);
+                            $("#img").html('<div style="margin:auto;height:50px;text-align:center;"><div style="text-align:center;color:grey;">水印嵌入成功，下载地址：</div><a id="path" style="color:grey;cursor:pointer;word-wrap:break-word;" herf='+path+' download=""  target="_blank">'+path+'</a></div>');
+                            $("#secretinput").val("");  //清空水印信息输入框
+                        },
+                        error:function(xhr,textStatus){          //获取数据失败所执行的函数
+                            console.log('error',xhr.responseText)
+                            console.log(xhr)
+                            console.log(textStatus)
+                        }
+                    });
+                }
+            }
+            else{
+                sec={"filename":file1.source['name'],"secrets":imgByte,"type":value};
+                $("#img").html('<div style="margin:auto;height:50px;width:50px;"><img src="static/loading.gif" style="height:50px;width:50px;" alt=""></div><div style="text-align:center;color:grey;">正在编码请稍候...</div>');
+                $.ajax({
+                    url: '{{ url_for("encode") }}',
+                    type: "POST",
+                    headers:{
+                        "Content-Type": "application/json;charset=utf-8"
+                    },
+                    contentType:'application/json;charset=utf-8',
+                    data: JSON.stringify(sec),
+                    success:function(path,textStatus,jqXHR){ //获取数据成功所执行的函数
+                        $("#img").html('<div style="margin:auto;height:50px;text-align:center;"><div style="text-align:center;color:grey;">水印嵌入成功，下载地址：</div><a id="path" style="color:grey;cursor:pointer;word-wrap:break-word;" herf='+path+' download=""  target="_blank">'+path+'</a></div>');
+                        $("#secretinput").val("");  //清空水印信息输入框
+                    },
+                    error:function(xhr,textStatus){          //获取数据失败所执行的函数
+                        console.log('error',xhr.responseText)
+                        console.log(xhr)
+                        console.log(textStatus)
+                    }
+                });
+            }
+        });
+        uploader.on('startUpload', function() { // 开始上传时，调用该方法
+            $('#progress').show();
+            $('.progress-bar').css('width', '0%');
+            $('.progress-bar').text('0%');
+            $('.progress-bar').removeClass('progress-bar-danger progress-bar-success');
+            $('.progress-bar').addClass('active progress-bar-striped');
+        });
+
+        uploader.on('uploadProgress', function(file, percentage) { // 一个分片上传成功后，调用该方法
+            $('.progress-bar').css('width', percentage * 100 - 1 + '%');
+            $('.progress-bar').text(Math.floor(percentage * 100 - 1) + '%');
+        });
+
+        uploader.on('uploadSuccess', function(file) { // 整个文件的所有分片都上传成功后，调用该方法
+            var data = { 'task_id': task_id, 'filename': file.source['name'] };
+            $.get('{{ url_for("upload_success") }}', data);
+            console.log(data);
+            $('.progress-bar').css('width', '100%');
+            $('.progress-bar').text('100%');
+            $('.progress-bar').addClass('progress-bar-success');
+            $('.progress-bar').text('上传完成 '+data.filename);
+            file1=file
+        });
+
+        uploader.on('uploadError', function(file) { // 上传过程中发生异常，调用该方法
+            $('.progress-bar').css('width', '100%');
+            $('.progress-bar').text('100%');
+            $('.progress-bar').addClass('progress-bar-danger');
+            $('.progress-bar').text('上传失败');
+        });
+
+        uploader.on('uploadComplete', function(file) { // 上传结束，无论文件最终是否上传成功，该方法都会被调用
+            $('.progress-bar').removeClass('active progress-bar-striped');
+        });
+
+        //解码函数
+        downloader.on('startUpload', function() { // 开始上传时，调用该方法
+            $('#progress').show();
+            $('.filelist').empty();
+            $('#imgResult').empty();
+            $("#img").show();
+            $('.progress-bar').css('width', '0%');
+            $('.progress-bar').text('0%');
+            $('.progress-bar').removeClass('progress-bar-danger progress-bar-success');
+            $('.progress-bar').addClass('active progress-bar-striped');
+        });
+
+        downloader.on('uploadProgress', function(file, percentage) { // 一个分片上传成功后，调用该方法
+            $('.progress-bar').css('width', percentage * 100 - 1 + '%');
+            $('.progress-bar').text(Math.floor(percentage * 100 - 1) + '%');
+        });
+
+        downloader.on('uploadSuccess', function(file) { // 整个文件的所有分片都上传成功后，调用该方法
+            var data = { 'task_id': task_id, 'filename': file.source['name'] };
+            console.log(data);
+            ajaxGet(data);
+            $('.progress-bar').css('width', '100%');
+            $('.progress-bar').text('100%');
+            $('.progress-bar').addClass('progress-bar-success');
+            $('.progress-bar').text('上传成功 '+data.filename);
+            $("#img").html('<div style="margin:auto;height:50px;width:50px;"><img src="static/loading.gif" style="height:50px;width:50px;" alt=""></div><div style="text-align:center;color:grey;">正在解码请稍候...</div>');
+
+        });
+        function ajaxGet(data){
+            $.ajax({
+                url: '{{ url_for("upload_decode_success") }}',
+                type: "GET",
+                headers:{
+                    "Content-Type": "application/json;charset=utf-8"
+                },
+                contentType:'application/json;charset=utf-8',
+                data: data,
+                dataType: "text",
+                timeout:600000,
+                success:function(result,textStatus,jqXHR){ //获取数据成功所执行的函数
+                    $("#img").hide();
+                    console.log(result);
+                    if(result=="noMsg")
+                        alert("该视频无水印信息！");
+                    else{
+                        mtype=result.charAt(result.length-1)
+                        console.log(mtype);
+                        result=result.substring(0,result.length-1)
+                        console.log(result);
+                        if(mtype=='0'){
+                            var r = [];
+                            var str=result;
+                            //通过空格来分开二进制的字符
+                            var list = str.split(" ");
+                            for(var i=0;i<list.length;i++){
+                                var item = list[i];
+                                //转为asciicode 码
+                                var asciiCode = parseInt(item,2);
+                                //转为文字
+                                var charValue = String.fromCharCode(asciiCode);
+                                //添加到集合中
+                                r.push(charValue);
+                            }
+                            //返回结果
+                            str = r.join("");
+                            $('.filelist').text("解码信息："+str);
+                        }
+                        else{
+                            var r = document.getElementById("imgResult");
+                            var src = "data:image/jpeg" + ";base64," + result;
+                            console.log(src);
+                            r.innerHTML = '<img style="width:325px;height:200px;" src ="'+src+'"/>';
+                        }
+                    }
+                },
+                error:function(xhr,textStatus){          //获取数据失败所执行的函数
+                    let num=0;
+                    if(xhr.readyState==0){
+                        // 超时问题，
+                        if (num < 5) {
+                            setTimeout(() => {
+                              console.log("尝试重连:", num++);
+                              ajaxGet(data);
+                            }, 1000);
+                          } else {
+                        $("#img").hide();
+                        alert("该视频无水印信息！");
+                        }
+                    }else{
+                        alert('发生错误','系统错误，请联系管理员','info');
+                        console.log('error',xhr.responseText)
+                        console.log(xhr)
+                        console.log(textStatus)
+                    }
+                }
+            });
+        }
+        downloader.on('uploadError', function(file) { // 上传过程中发生异常，调用该方法
+            $('.progress-bar').css('width', '100%');
+            $('.progress-bar').text('100%');
+            $('.progress-bar').addClass('progress-bar-danger');
+            $('.progress-bar').text('上传失败');
+        });
+
+        downloader.on('uploadComplete', function(file) { // 上传结束，无论文件最终是否上传成功，该方法都会被调用
+            $('.progress-bar').removeClass('active progress-bar-striped');
+        });
+        $('#progress').hide();
+    });
+
+</script>
+</body>
+</html>
