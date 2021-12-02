@@ -8,7 +8,6 @@ nowTime = time.strftime("%Y-%m-%d %H:%M:%S")
 from conSql import search_maxid, insert_msg, search
 from stegstash import soundlsb
 
-
 def audio_embed(filename: str, secrest: str):
     cmd = 'ffmpeg -i {} -f wav -ar 16000 {}'
     cmd.format(filename, './audio.wav')
